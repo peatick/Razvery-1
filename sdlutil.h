@@ -1101,6 +1101,7 @@ public:
 struct Editor_mgr{
     std::string name;
     Editor edits;
+    SDL_Rect tub;
 };
 
 class workspace{
@@ -1111,11 +1112,20 @@ class workspace{
     void new_workspace(std::string work_names,Renderer& ren){
         Editor ed;
         ed.set_init(w_r, "hello world!\n",ren.lineH);
-        work_s.push_back({work_names,ed});
+        work_s.push_back({work_names,ed,{0,0,0,0}});
+    }
+    void push_workspace(std::string work_names,std::string file_in_str,Renderer& ren){
+        Editor ed;
+        ed.set_init(w_r, file_in_str,ren.lineH);
+        work_s.push_back({work_names,ed,{0,0,0,0}});
+    }
+    void erase_workspace(int w_id){
+        work_s.erase(work_s.begin() + w_id);
     }
     void init(Renderer& ren){
         new_workspace("new_workspace",ren);
     }
+
 };
 
 void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy);
