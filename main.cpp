@@ -22,13 +22,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    Editor ed;
     file_explorer nm;
-	nm.F_X = 10; nm.F_Y = 20;
-    nm.F_W = 200;nm.F_H = 190;
-    ed.lineH = renderer.lineH;
-    ed.init();
-    ed.buf.setAllText(
+	nm.F_X = 0; nm.F_Y = 20;
+    nm.F_W = 200;nm.F_H = WIN_H - 20;
+    workspace ws;
+    ws.init(renderer);
+    /*
+    .buf.setAllText(
         "SDL2 テキストエディタ  (差分方式 Undo/Redo)\n"
         "IME入力（日本語・中国語・韓国語）対応\n"
         "\n"
@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
         "  Ctrl+Home/End     文書頭/末尾\n"
         "  ダブルクリック    単語選択\n"
     );
+    */
     nm.init(renderer.lineH);
     int mx = 0;
     int my = 0;
@@ -52,6 +53,7 @@ int main(int argc, char* argv[]) {
     bool running = true, mouseDown = false;
     while (running) {
         SDL_Event e;
+        Editor& ed = ws.work_s[ws.active].edits;
         while (SDL_PollEvent(&e)) {
             mousex = e.button.x;
             mousey = e.button.y;
@@ -75,13 +77,12 @@ int main(int argc, char* argv[]) {
             }
             if (buttonClicked(e, {0,0,70,20}, {e.button.x,e.button.y})) {
                 printf("Click!\n");
-                
+                ed.buf.setAllText(nm.get_str);
             }
-            
         }
         renderer.draw_bg({250,250,250,255});
-        //renderer.TextBox(ed);
-        //renderer.btn_draw({ 0,0,70,20 }, { mousex,mousey }, "クリック");
+        renderer.TextBox(ed);
+        renderer.btn_draw({ 0,0,70,20 }, { mousex,mousey }, "読み込み");
         renderer.update_fs_explorer(nm);
         renderer.rend();
     }
