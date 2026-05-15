@@ -5,6 +5,7 @@
 #include <climits>
 #include <deque>
 #include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -340,7 +341,12 @@ public:
     bool   caretOn = true;
 
     void init() { cursor = { 0,0 }; selAnchor = { 0,0 }; }
-
+    void set_init(SDL_Rect r,std::string str,int lH){
+        lineH = lH;
+        TX_X = r.x;TX_Y = r.y;TX_W = r.w;TX_H = r.h;
+        buf.setAllText(str);
+        init();
+    }
     // ---- Selection ----
     TextBuffer::Pos selMin() const { return cursor < selAnchor ? cursor : selAnchor; }
     TextBuffer::Pos selMax() const { return cursor < selAnchor ? selAnchor : cursor; }
@@ -572,6 +578,8 @@ class file_explorer {
     fs::path p = fs::current_path();
     std::vector<file_enum> file_lists;
 	Editor ed;
+    std::fstream t_files;
+    std::string get_str = "nil";
     void init(int lineH){
         ed.cursor = { 0,0 };
         ed.lineH = lineH;
@@ -661,6 +669,21 @@ class file_explorer {
             return a.subs_path.filename() < b.subs_path.filename();
         });
 	}
+    std::string read_txt_file(fs::path f_path){
+        t_files.open(f_path,std::ios::in);
+        if(t_files.is_open()){
+            std::string l,all_str;
+            while(getline(t_files,l)){
+                all_str += l;
+                all_str += "\n";
+            }
+            t_files.close();
+            return all_str;
+        }else{
+            printf("failed\n");
+        }
+        return "f";
+    }
     bool hitscan(SDL_Point mousePos,bool click,bool doubleclick) {
 		if (file_lists.empty()) return false;
         SDL_Rect hit = {F_X,F_Y,F_W,F_H};
@@ -673,6 +696,10 @@ class file_explorer {
                 if(fs::is_directory(file_lists[i].subs_path)) {
                     path_set(true,file_lists[i].subs_path);
                     return true;
+                }if(fs::is_regular_file(file_lists[i].subs_path)){
+                    if(file_lists[i].subs_path.extension().string() == ".txt"){
+                        get_str = read_txt_file(file_lists[i].subs_path);
+                    }
                 }
             }
             if(click){
@@ -689,6 +716,7 @@ class file_explorer {
     void back_path(){
         path_set(true,p.parent_path());
     }
+    
 };
 
 class Renderer {
@@ -715,7 +743,7 @@ public:
         if (SDL_Init(SDL_INIT_VIDEO) < 0) return false;
         if (TTF_Init() < 0) return false;
         
-        win = SDL_CreateWindow("SDL2",SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WIN_W, WIN_H, SDL_WINDOW_RESIZABLE);
+        win = SDL_CreateWindow("SDL2",SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WIN_W, WIN_H, 0);
         if (!win) return false;
         ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
         if (!ren) return false;
@@ -1069,6 +1097,25 @@ public:
         SDL_RenderSetClipRect(ren, nullptr);
     }
 
+};
+struct Editor_mgr{
+    std::string name;
+    Editor edits;
+};
+
+class workspace{
+    public:
+    SDL_Rect w_r = {200,40,500,500};
+    std::vector<Editor_mgr> work_s;
+    int active = 0;
+    void new_workspace(std::string work_names,Renderer& ren){
+        Editor ed;
+        ed.set_init(w_r, "hello world!\n",ren.lineH);
+        work_s.push_back({work_names,ed});
+    }
+    void init(Renderer& ren){
+        new_workspace("new_workspace",ren);
+    }
 };
 
 void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy);
