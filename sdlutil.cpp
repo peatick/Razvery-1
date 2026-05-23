@@ -45,12 +45,11 @@ std::string utf8_substr(const std::string& s, size_t char_count) {
     return s.substr(0, i);
 }
 
-void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy)
+void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler)
 {
-    bool select = ed.TX_X < mox && mox < ed.TX_X + ed.TX_W && ed.TX_Y < moy && moy < ed.TX_Y + ed.TX_H;
+    bool select = ed.TX_X < mox && mox < ed.TX_X + ed.TX_W && ed.TX_Y < moy && moy < ed.TX_Y + ed.TX_H && handler;
     int nm_x = e.button.x;
     int nm_y = e.button.y;
-    bool hv = false;
     switch (e.type) {
     case SDL_KEYDOWN: {
         if (!select) {
@@ -170,12 +169,11 @@ void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown
         ed.tickBlink();
     }
 }
-void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy)
+void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler)
 {
-    bool select = ed.TX_X < mox && mox < ed.TX_X + ed.TX_W && ed.TX_Y < moy && moy < ed.TX_Y + ed.TX_H;
+    bool select = ed.TX_X < mox && mox < ed.TX_X + ed.TX_W && ed.TX_Y < moy && moy < ed.TX_Y + ed.TX_H && handler;
     int nm_x = e.button.x;
     int nm_y = e.button.y;
-    bool hv = false;
 
     switch (e.type) {
     case SDL_KEYDOWN: {
@@ -294,15 +292,30 @@ void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseD
     }
 }
 
-void file_explorer_event(SDL_Event& e,file_explorer& fi){
+void file_explorer_event(SDL_Event& e,file_explorer& fi,Renderer& renderer,bool handler){
     int nm_x = 0;
     int nm_y = 0;
     SDL_GetMouseState(&nm_x,&nm_y);
+    float lx, ly;
+    SDL_RenderWindowToLogical(renderer.ren, nm_x, nm_y, &lx, &ly);
+	nm_x = int(lx);
+	nm_y = int(ly);
+	if (!handler) {
+        return;
+    }
     bool hv = fi.F_X < nm_x && nm_x < fi.F_X + fi.F_W && fi.F_Y < nm_y && nm_y < fi.F_Y + fi.F_H;
     switch (e.type) {
     case SDL_MOUSEWHEEL:
         if(!hv) { break; }
         fi.scrollRow = std::clamp(fi.scrollRow - e.wheel.y, 0, int(fi.file_lists.size() - 1));
+        break;
+    case SDL_KEYDOWN:
+        switch (e.key.keysym.sym) {
+        case SDLK_RETURN:
+        case SDLK_KP_ENTER:
+            fi.path_set(false, "");
+            break;
+        }
         break;
     }
 	bool click = e.type == SDL_MOUSEBUTTONDOWN && e.button.clicks == 1 && e.button.button == SDL_BUTTON_LEFT;

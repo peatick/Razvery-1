@@ -10,6 +10,7 @@
 #include <vector>
 #include <filesystem>
 #include <iostream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
@@ -20,8 +21,10 @@ struct file_enum {
     bool selected = false;
     SDL_Rect rect = {0, 0, 0, 0};
 };
-static constexpr int    WIN_W = 900;
-static constexpr int    WIN_H = 600;
+static constexpr int    WIN_W = 1200;
+static constexpr int    WIN_H = 800;
+static constexpr int    logical_W = 1200;
+static constexpr int    logical_H = 800;
 static constexpr int    FONT_SIZE = 18;
 static constexpr int    FONTSML_SIZE = 12;
 static constexpr int    PG = 16;
@@ -718,7 +721,92 @@ class file_explorer {
     }
     
 };
-
+class UI {
+public:
+    struct button_set {
+        SDL_Rect r = {0, 0, 70, 20};
+        std::string subject = "button";
+        bool hovered = false;
+        bool selected = false;
+        bool isTGR = false;
+		bool ishidden = false;
+		std::string group = "default";
+		bool onese = false;
+		bool bef = false;
+		bool tgr_bef = false;
+    };
+    SDL_Point mousePos = {0,0};
+    bool Left_click = false;
+    std::unordered_map<std::string, button_set> button_map;
+    void group_off(std::string s, std::string ne) {
+        for (auto& [name, btn] : button_map) {
+            if (btn.group == s && name != ne) {
+                btn.selected = false;
+            }
+        }
+    }
+    void group_hide(std::string s,bool hidden) {
+        for (auto& [name, btn] : button_map) {
+            if (btn.group == s) {
+                btn.ishidden = hidden;
+            }
+        }
+	}
+    bool button(std::string name) {
+        if (!button_map.contains(name)) return false;
+		if (button_map[name].ishidden) return false;
+		bool hv = SDL_PointInRect(&mousePos, &button_map[name].r);
+		button_map[name].hovered = hv;
+        if (button_map[name].isTGR) {
+            if (hv && Left_click){
+                if(!button_map[name].tgr_bef){
+                    button_map[name].tgr_bef = true;
+                    button_map[name].selected = !button_map[name].selected;
+                    if (button_map[name].selected) {
+						group_off(button_map[name].group, name);
+                    }
+                }
+            }
+            else {
+				button_map[name].tgr_bef = false;
+            }
+        }
+        else {
+			button_map[name].selected = (hv && Left_click);
+        }
+        if (!button_map[name].onese) {
+            return button_map[name].selected;
+        }
+        else {
+			bool result = false;
+            if (!button_map[name].bef) {
+                if (button_map[name].selected) {
+                    result = true;
+					button_map[name].bef = true;
+                }
+            }
+            else {
+                if (!button_map[name].selected) {
+                    button_map[name].bef = false;
+                }
+            }
+			return result;
+        }
+    }
+	bool pulse_click(bool bef, bool now) {
+        if (!bef) {
+            if (now) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+};
 class Renderer {
     SDL_Window* win = nullptr;
     TTF_Font* font = nullptr;
@@ -739,16 +827,17 @@ public:
     int lineH = 0;
     int PADDING = PG;
     bool init(const char* fontPath) {
-        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+        
         if (SDL_Init(SDL_INIT_VIDEO) < 0) return false;
         if (TTF_Init() < 0) return false;
         
-        win = SDL_CreateWindow("SDL2",SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WIN_W, WIN_H, 0);
+        win = SDL_CreateWindow("SDL2",SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WIN_W, WIN_H, SDL_WINDOW_RESIZABLE);
         if (!win) return false;
-        ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
         if (!ren) return false;
 
-        SDL_RenderSetLogicalSize(ren, WIN_W, WIN_H);
+        SDL_RenderSetLogicalSize(ren, logical_W, logical_H);
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
         font = TTF_OpenFont(fontPath, FONT_SIZE);
         font_sml = TTF_OpenFont(fontPath, FONT_SIZE);
@@ -863,21 +952,31 @@ public:
     void rend() {
         SDL_RenderPresent(ren);
     }
-    void btn_draw(SDL_Rect r,SDL_Point p,std::string text) {
-        if (SDL_PointInRect(&p, &r)) {
-			SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
+    void btn_draw(UI& ui,std::string name_key) {
+		if (!ui.button_map.contains(name_key)) return;
+        SDL_Color col;
+		UI::button_set& b = ui.button_map[name_key];
+		if (b.hovered) { 
+            if (b.selected) { 
+                col = { 180, 180, 180, 255 }; 
+            }
+            else {
+                col = { 220, 220, 220, 255 };
+            }
         }
-        else {
-            SDL_SetRenderDrawColor(ren, 250, 250, 250, 255);
+		else { col = { 250, 250, 250, 255 }; }
+        if (b.isTGR) {
+            if(b.selected){
+                col = { 150, 150, 150, 255 };
+			}
         }
-		SDL_RenderFillRect(ren, &r);
-        if (!text.empty()) {
-            int tw = smltextWidth(text);
-            int th = lineH - 10;
-            int tx = r.x + (r.w - tw) / 2;
-            int ty = r.y + (r.h - th) / 2;
-            drawsmlText(text, tx, ty, {0, 0, 0, 255});
-        }
+        SDL_SetRenderDrawColor(ren, col.r, col.g, col.b, col.a);
+        SDL_RenderFillRect(ren, &b.r);
+        int tw = smltextWidth(b.subject);
+        int th = lineH - 10;
+        int tx = b.r.x + (b.r.w - tw) / 2;
+        int ty = b.r.y + (b.r.h - th) / 2;
+        drawsmlText(b.subject, tx, ty, { 5,5,5,255 });
     }
     void TextBox(Editor& ed) {
         int winW, winH; SDL_GetWindowSize(win, &winW, &winH);
@@ -1096,7 +1195,12 @@ public:
         }
         SDL_RenderSetClipRect(ren, nullptr);
     }
-
+    void mouse_logical_pos(int& mouse_x, int& mouse_y) {
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        float mx, my;
+        SDL_RenderWindowToLogical(ren, mouse_x, mouse_y, &mx, &my);
+        mouse_x = (int)mx; mouse_y = (int)my;
+	}
 };
 struct Editor_mgr{
     std::string name;
@@ -1106,9 +1210,10 @@ struct Editor_mgr{
 
 class workspace{
     public:
-    SDL_Rect w_r = {200,40,500,500};
+    SDL_Rect w_r = {200,40,700,550};
     std::vector<Editor_mgr> work_s;
     int active = 0;
+	Editor search_ed;
     void new_workspace(std::string work_names,Renderer& ren){
         Editor ed;
         ed.set_init(w_r, "hello world!\n",ren.lineH);
@@ -1124,10 +1229,15 @@ class workspace{
     }
     void init(Renderer& ren){
         new_workspace("new_workspace",ren);
+        search_ed.set_init({50,50,200,40}, "", ren.lineH);
     }
-
+    void search_str(std::string s) {
+		if (s.empty()) return;
+		Editor& active_ed = work_s[active].edits;
+		std::vector<int> results;
+    }
 };
 
-void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy);
-void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy);
-void file_explorer_event(SDL_Event& e,file_explorer& fi);
+void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler);
+void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler);
+void file_explorer_event(SDL_Event& e, file_explorer& fi, Renderer& renderer, bool handler);

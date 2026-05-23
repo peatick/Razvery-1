@@ -1,17 +1,15 @@
 #include "sdl2/include/SDL.h"
 #include "sdl2/include/SDL_ttf.h"
 #include "sdlutil.h"
+#include "ui_cfg.h"
 #include <algorithm>
 #include <climits>
 #include <deque>
 #include <sstream>
 #include <string>
 #include <vector>
-bool buttonClicked(SDL_Event& e, SDL_Rect r,SDL_Point p) {
-    if (e.type != SDL_MOUSEBUTTONDOWN) return false;
 
-    return SDL_PointInRect(&p, &r);
-}
+
 
 int main(int argc, char* argv[]) {
     const char* fontPath = (argc > 1) ? argv[1] : "";
@@ -22,13 +20,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    file_explorer nm;
-	nm.F_X = 0; nm.F_Y = 20;
-    nm.F_W = 200;nm.F_H = WIN_H - 20;
+    file_explorer file_ex;
+	file_ex.F_X = 0; file_ex.F_Y = 20;
+    file_ex.F_W = 200;file_ex.F_H = WIN_H - 20;
     workspace ws;
     ws.init(renderer);
     /*
-    .buf.setAllText(
         "SDL2 テキストエディタ  (差分方式 Undo/Redo)\n"
         "IME入力（日本語・中国語・韓国語）対応\n"
         "\n"
@@ -44,13 +41,20 @@ int main(int argc, char* argv[]) {
         "  Home/End          行頭/行末\n"
         "  Ctrl+Home/End     文書頭/末尾\n"
         "  ダブルクリック    単語選択\n"
-    );
     */
-    nm.init(renderer.lineH);
+    file_ex.init(renderer.lineH);
+    UI ui;
+	UI_CFG ui_cfg;
+	ui_cfg.init(ui);
     int mx = 0;
     int my = 0;
 	int mousex = 0, mousey = 0;
     bool running = true, mouseDown = false;
+	bool bef_mousebtn = false, now_mousebtn = false;
+    auto imitate_btn = [&renderer, &ui](std::string but_key) {
+		renderer.btn_draw(ui, but_key);
+		return ui.button(but_key);
+    };
     while (running) {
         SDL_Event e;
         Editor& ed = ws.work_s[ws.active].edits;
@@ -59,31 +63,36 @@ int main(int argc, char* argv[]) {
             mousey = e.button.y;
             switch (e.type) {
             case SDL_QUIT: running = false; break;
-            case SDL_KEYDOWN:
-                switch (e.key.keysym.sym) {
-                case SDLK_RETURN:
-                case SDLK_KP_ENTER:
-                    nm.path_set(false,"");
-                    break;
-                }
-                break;
             }
-            textEditEvent(e, ed, renderer, mouseDown, mx, my);
-            textEditEvent_sh(e, nm.ed, renderer, mouseDown, mx, my);
-            file_explorer_event(e,nm);
+            textEditEvent(e, ed, renderer, mouseDown, mx, my, true);
+            textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
+            file_explorer_event(e,file_ex,renderer,true);
             if (e.type == SDL_MOUSEBUTTONDOWN) {
                 mx = e.button.x;
                 my = e.button.y;
             }
+            /*
             if (buttonClicked(e, {0,0,70,20}, {e.button.x,e.button.y})) {
                 printf("Click!\n");
-                ed.buf.setAllText(nm.get_str);
+                ed.buf.setAllText(file_ex.get_str);
             }
+            */
+			renderer.mouse_logical_pos(mousex, mousey);
+			ui.mousePos = { mousex, mousey };
+			now_mousebtn = e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT;
+			ui.Left_click = ui.pulse_click(bef_mousebtn, now_mousebtn);
+			//ui.Left_click = now_mousebtn;
+            bef_mousebtn = now_mousebtn;
         }
         renderer.draw_bg({250,250,250,255});
         renderer.TextBox(ed);
-        renderer.btn_draw({ 0,0,70,20 }, { mousex,mousey }, "読み込み");
-        renderer.update_fs_explorer(nm);
+        renderer.update_fs_explorer(file_ex);
+        if (imitate_btn("File")) {
+            printf("Click!\n");
+        }
+        if (imitate_btn("Edit")) {
+            printf("Click!\n");
+        }
         renderer.rend();
     }
     renderer.destroy();
