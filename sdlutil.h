@@ -326,6 +326,7 @@ public:
     TextBuffer::Pos cursor;
     TextBuffer::Pos selAnchor;
     bool            hasSelection = false;
+	bool            noLineNo = false;
     int PADDING = PG;
     // IME
     std::string imeComposing;
@@ -550,7 +551,12 @@ public:
 
     // ---- Mouse hit-test ----
     TextBuffer::Pos hitTest(int px, int py, TTF_Font* font) const {
-        px -= TX_X + PADDING + 35;
+        if (noLineNo) {
+            px -= TX_X + PADDING - 14;
+        }
+        else {
+            px -= TX_X + PADDING + 34;
+        }
         py -= TX_Y;
         int row = scrollRow + (py - PADDING) / lineH;
         row = std::clamp(row, 0, buf.numLines() - 1);
@@ -740,6 +746,7 @@ public:
     };
     SDL_Point mousePos = {0,0};
     bool Left_click = false;
+    bool z = false;
     std::unordered_map<std::string, button_set> button_map;
     void group_off(std::string s, std::string ne) {
         for (auto& [name, btn] : button_map) {
@@ -755,6 +762,15 @@ public:
             }
         }
 	}
+    void flont() {
+		bool found = false;
+        for (auto& [name, btn] : button_map) {
+            if (btn.selected) {
+				found = true;
+            }
+        }
+		z = found;
+    }
     bool button(std::string name) {
         if (!button_map.contains(name)) return false;
 		if (button_map[name].ishidden) return false;
@@ -823,7 +839,6 @@ class Renderer {
     SDL_Color colIme = { 100, 200, 255, 255 };
     SDL_Color colImeBg = { 50,  60,  80,  200 };
 
-    int linenoW = 50;
 
 public:
     SDL_Renderer* ren = nullptr;
@@ -983,6 +998,7 @@ public:
     }
     void TextBox(Editor& ed) {
         int winW, winH; SDL_GetWindowSize(win, &winW, &winH);
+		int linenoW = ed.noLineNo ? 0 : 50;
         ed.lineH = lineH;
         ed.viewRows = (ed.TX_H - PADDING * 2) / lineH;
         ed.viewW = ed.TX_W - linenoW - PADDING * 2;
@@ -1041,13 +1057,13 @@ public:
         }
 
         SDL_RenderSetClipRect(ren, nullptr);
-
-        // Line numbers
-        SDL_SetRenderDrawColor(ren, 40, 40, 48, 255);
-        SDL_Rect lnbg = { ed.TX_X, ed.TX_Y, 50, ed.TX_H }; SDL_RenderFillRect(ren, &lnbg);
-        for (int r = ed.scrollRow; r < last; ++r)
-            drawText(std::to_string(r + 1), ed.TX_X + 5 + PADDING, ed.TX_Y + (r - ed.scrollRow) * lineH + PADDING, colLineno);
-
+        if (!ed.noLineNo) {
+            // Line numbers
+            SDL_SetRenderDrawColor(ren, 40, 40, 48, 255);
+            SDL_Rect lnbg = { ed.TX_X, ed.TX_Y, 50, ed.TX_H }; SDL_RenderFillRect(ren, &lnbg);
+            for (int r = ed.scrollRow; r < last; ++r)
+                drawText(std::to_string(r + 1), ed.TX_X + 5 + PADDING, ed.TX_Y + (r - ed.scrollRow) * lineH + PADDING, colLineno);
+        }
         // Status bar
         SDL_SetRenderDrawColor(ren, 20, 20, 25, 255);
         SDL_Rect sb = { ed.TX_X,ed.TX_Y + ed.TX_H - 24,ed.TX_W, 24 }; SDL_RenderFillRect(ren, &sb);
@@ -1061,6 +1077,7 @@ public:
     }
     void TextBoxsh(Editor& ed) {
         int winW, winH; SDL_GetWindowSize(win, &winW, &winH);
+        int linenoW = ed.noLineNo ? 0 : 50;
         ed.lineH = lineH;
         ed.viewRows = (ed.TX_H - ed.PADDING * 2) / lineH;
         ed.viewW = ed.TX_W - linenoW - ed.PADDING * 2;
@@ -1068,10 +1085,10 @@ public:
         SDL_SetRenderDrawColor(ren, colBg.r, colBg.g, colBg.b, 255);
         SDL_RenderFillRect(ren, &bgrect);
 
-        SDL_Rect clip = { linenoW + ed.PADDING + ed.TX_X, ed.PADDING + ed.TX_Y, ed.TX_W - (linenoW + ed.PADDING), (ed.TX_Y + ed.TX_H) - ed.PADDING * 2 };
+        SDL_Rect clip = { linenoW + ed.PADDING + ed.TX_X - 10, ed.PADDING + ed.TX_Y, ed.TX_W - (linenoW + ed.PADDING), (ed.TX_Y + ed.TX_H) - ed.PADDING * 2 };
         SDL_RenderSetClipRect(ren, &clip);
 
-        int x0 = linenoW + ed.PADDING - ed.scrollX;
+        int x0 = linenoW + ed.PADDING - ed.scrollX - 10;
         int last = std::min(ed.scrollRow + ed.viewRows + 1, ed.buf.numLines());
 
         for (int row = ed.scrollRow; row < last; ++row) {

@@ -55,9 +55,10 @@ int main(int argc, char* argv[]) {
 		renderer.btn_draw(ui, but_key);
 		return ui.button(but_key);
     };
+    Editor& ed = ws.work_s[ws.active].edits;
     while (running) {
         SDL_Event e;
-        Editor& ed = ws.work_s[ws.active].edits;
+        ed.noLineNo = true;
         while (SDL_PollEvent(&e)) {
             mousex = e.button.x;
             mousey = e.button.y;
@@ -65,11 +66,13 @@ int main(int argc, char* argv[]) {
             case SDL_QUIT: running = false; break;
             }
 			SDL_Point mouse_P = { mx, my };
-            ws.search_box_event(e,mouse_P);
-            textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
-            textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
-            textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
-            file_explorer_event(e,file_ex,renderer,true);
+            if (!ui.z) {
+                ws.search_box_event(e, mouse_P);
+                textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
+                textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
+                textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
+                file_explorer_event(e, file_ex, renderer, true);
+            }
             if (e.type == SDL_MOUSEBUTTONDOWN) {
                 mx = e.button.x;
                 my = e.button.y;
@@ -94,10 +97,18 @@ int main(int argc, char* argv[]) {
             ws.search_str(ws.search_box.buf.line(0));
         }
         if (imitate_btn("Edit")) {
-            ws.search_box_cursor_move();
+            
         }
-        
+        if (imitate_btn("View")) {
+            if (imitate_btn("Texteditor")) {
+
+            }
+        }
+        else {
+			ui.group_off("View", "");
+        }
         renderer.rend();
+		ui.flont();
     }
     renderer.destroy();
     return 0;

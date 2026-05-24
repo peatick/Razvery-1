@@ -9,6 +9,10 @@ public:
 		ui.button_map["File"].isTGR = true;
 		ui.button_map["Edit"] = { {70,0,70,20},"Edit" };
 		ui.button_map["Edit"].isTGR = true;
-
+		ui.button_map["View"] = { {140,0,70,20},"View" };
+		ui.button_map["View"].isTGR = true;
+		ui.button_map["Texteditor"] = { {140,20,70,20},"Texteditor" };
+		ui.button_map["Texteditor"].isTGR = true;
+		ui.button_map["Texteditor"].group = "View";
 	}
 };
