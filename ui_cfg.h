@@ -9,5 +9,6 @@ public:
 		ui.button_map["File"].isTGR = true;
 		ui.button_map["Edit"] = { {70,0,70,20},"Edit" };
 		ui.button_map["Edit"].isTGR = true;
+
 	}
 };

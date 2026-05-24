@@ -13,7 +13,10 @@
 #include <unordered_map>
 
 namespace fs = std::filesystem;
-
+struct result_enum {
+    int row;
+    int col;
+};
 struct file_enum {
 	int rel_indent = 0;
 	fs::path parent_path;
@@ -1195,6 +1198,23 @@ public:
         }
         SDL_RenderSetClipRect(ren, nullptr);
     }
+    void search_box(Editor& ed,std::vector<result_enum>& sh,int now_rs, bool search_mode) {
+		if (!search_mode) return;
+        SDL_Rect box = {ed.TX_X,ed.TX_Y,ed.TX_W,ed.TX_H + 20};
+        SDL_SetRenderDrawColor(ren, colBg.r + 10, colBg.g + 10, colBg.b + 10, 255);
+        SDL_RenderFillRect(ren, &box);
+        TextBoxsh(ed);
+        int rs;
+        if (sh.empty()) {
+            rs = 0;
+        }
+        else {
+            rs = sh.size();
+        }
+        std::string result_box = std::to_string(rs) + " / " + std::to_string(now_rs);
+
+        drawText(result_box, ed.TX_X + 10, ed.TX_Y + ed.TX_H - 1, {250,250,250,255});
+    }
     void mouse_logical_pos(int& mouse_x, int& mouse_y) {
         SDL_GetMouseState(&mouse_x, &mouse_y);
         float mx, my;
@@ -1213,7 +1233,11 @@ class workspace{
     SDL_Rect w_r = {200,40,700,550};
     std::vector<Editor_mgr> work_s;
     int active = 0;
-	Editor search_ed;
+	bool search_mode = false;
+    std::vector<result_enum> search_results;
+	int search_index = 0;
+	Editor search_box;
+	std::string sh_str;
     void new_workspace(std::string work_names,Renderer& ren){
         Editor ed;
         ed.set_init(w_r, "hello world!\n",ren.lineH);
@@ -1229,12 +1253,57 @@ class workspace{
     }
     void init(Renderer& ren){
         new_workspace("new_workspace",ren);
-        search_ed.set_init({50,50,200,40}, "", ren.lineH);
+        search_box.set_init({700,50,200,40}, "", ren.lineH);
     }
     void search_str(std::string s) {
-		if (s.empty()) return;
-		Editor& active_ed = work_s[active].edits;
-		std::vector<int> results;
+        if (s.empty()) return;
+		search_index = 0;
+        Editor& active_ed = work_s[active].edits;
+        if (active_ed.buf.lines.empty()) return;
+		search_results.clear();
+		for (int i = 0; i < active_ed.buf.numLines(); ++i) {
+            const std::string& ln = active_ed.buf.line(i);
+            size_t pos = ln.find(s);
+            while (pos != std::string::npos) {
+                search_results.push_back({i, (int)pos});
+                pos = ln.find(s, pos + 1);
+            }
+        }
+    }
+    void search_box_cursor_move() {
+        if (search_results.empty()) return;
+		if (!search_mode) return;
+        Editor& active_ed = work_s[active].edits;
+		active_ed.cursor.col = search_results[search_index].col;
+		active_ed.cursor.row = search_results[search_index].row;
+        if (search_index < search_results.size() - 1) {
+           ++search_index;
+        } else {
+            search_index = 0;
+        }
+	}
+    void search_box_event(SDL_Event& e, SDL_Point mouse_P) {
+        if (!SDL_PointInRect(&mouse_P, &w_r)) return;
+        if (e.type == SDL_KEYDOWN) {
+            if ((e.key.keysym.mod & KMOD_CTRL) && e.key.keysym.sym == SDLK_f) {
+                search_mode = !search_mode;
+            }
+            else if (search_mode && e.key.keysym.sym == SDLK_RETURN) {
+                if(!search_results.empty()) {
+                    if (sh_str == search_box.buf.line(0)) {
+                        search_box_cursor_move();
+                    }
+                    else {
+                        search_str(search_box.buf.line(0));
+                        sh_str = search_box.buf.line(0);
+                    }
+                }
+                else {
+					search_str(search_box.buf.line(0));
+					sh_str = search_box.buf.line(0);
+                }
+			}
+        }
     }
 };
 

@@ -64,7 +64,10 @@ int main(int argc, char* argv[]) {
             switch (e.type) {
             case SDL_QUIT: running = false; break;
             }
-            textEditEvent(e, ed, renderer, mouseDown, mx, my, true);
+			SDL_Point mouse_P = { mx, my };
+            ws.search_box_event(e,mouse_P);
+            textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
+            textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
             textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
             file_explorer_event(e,file_ex,renderer,true);
             if (e.type == SDL_MOUSEBUTTONDOWN) {
@@ -81,18 +84,19 @@ int main(int argc, char* argv[]) {
 			ui.mousePos = { mousex, mousey };
 			now_mousebtn = e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT;
 			ui.Left_click = ui.pulse_click(bef_mousebtn, now_mousebtn);
-			//ui.Left_click = now_mousebtn;
             bef_mousebtn = now_mousebtn;
         }
         renderer.draw_bg({250,250,250,255});
         renderer.TextBox(ed);
         renderer.update_fs_explorer(file_ex);
+		renderer.search_box(ws.search_box, ws.search_results, ws.search_index, ws.search_mode);
         if (imitate_btn("File")) {
-            printf("Click!\n");
+            ws.search_str(ws.search_box.buf.line(0));
         }
         if (imitate_btn("Edit")) {
-            printf("Click!\n");
+            ws.search_box_cursor_move();
         }
+        
         renderer.rend();
     }
     renderer.destroy();
