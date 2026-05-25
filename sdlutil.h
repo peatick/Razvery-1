@@ -812,6 +812,12 @@ public:
 			return result;
         }
     }
+    void add_btn(std::string name,std::string gup,bool istgr,SDL_Rect rt){
+        button_map[name].subject = name;
+        button_map[name].group = gup;
+        button_map[name].isTGR = istgr;
+        button_map[name].r = rt;
+    }
 	bool pulse_click(bool bef, bool now) {
         if (!bef) {
             if (now) {

@@ -58,7 +58,6 @@ int main(int argc, char* argv[]) {
     Editor& ed = ws.work_s[ws.active].edits;
     while (running) {
         SDL_Event e;
-        ed.noLineNo = true;
         while (SDL_PollEvent(&e)) {
             mousex = e.button.x;
             mousey = e.button.y;
@@ -77,12 +76,6 @@ int main(int argc, char* argv[]) {
                 mx = e.button.x;
                 my = e.button.y;
             }
-            /*
-            if (buttonClicked(e, {0,0,70,20}, {e.button.x,e.button.y})) {
-                printf("Click!\n");
-                ed.buf.setAllText(file_ex.get_str);
-            }
-            */
 			renderer.mouse_logical_pos(mousex, mousey);
 			ui.mousePos = { mousex, mousey };
 			now_mousebtn = e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT;
@@ -94,14 +87,14 @@ int main(int argc, char* argv[]) {
         renderer.update_fs_explorer(file_ex);
 		renderer.search_box(ws.search_box, ws.search_results, ws.search_index, ws.search_mode);
         if (imitate_btn("File")) {
-            ws.search_str(ws.search_box.buf.line(0));
+            
         }
         if (imitate_btn("Edit")) {
             
         }
         if (imitate_btn("View")) {
             if (imitate_btn("Texteditor")) {
-
+                ed.noLineNo = imitate_btn("LineNum");
             }
         }
         else {
