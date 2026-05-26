@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
     UI ui;
 	UI_CFG ui_cfg;
 	ui_cfg.init(ui);
+    ui.sp_btns["FileEX_close"].ishide = false;
     int mx = 0;
     int my = 0;
 	int mousex = 0, mousey = 0;
@@ -54,6 +55,10 @@ int main(int argc, char* argv[]) {
     auto imitate_btn = [&renderer, &ui](std::string but_key) {
 		renderer.btn_draw(ui, but_key);
 		return ui.button(but_key);
+    };
+    auto imitate_spbtn = [&renderer, &ui](std::string b_key){
+        renderer.sp_button(ui,b_key);
+        return ui.sp_btn_cl(b_key);
     };
     Editor& ed = ws.work_s[ws.active].edits;
     while (running) {
@@ -65,14 +70,16 @@ int main(int argc, char* argv[]) {
             case SDL_QUIT: running = false; break;
             }
 			SDL_Point mouse_P = { mx, my };
-            if (!ui.z) {
-                ws.search_box_event(e, mouse_P);
-                textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
-                textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
-                textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
-                file_explorer_event(e, file_ex, renderer, true);
+            if(ui.layer == 0){
+                if (!ui.z) {
+                    ws.search_box_event(e, mouse_P);
+                    textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
+                    textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
+                    textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
+                    file_explorer_event(e, file_ex, renderer, true);
+                }
             }
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                if (e.type == SDL_MOUSEBUTTONDOWN) {
                 mx = e.button.x;
                 my = e.button.y;
             }
@@ -87,7 +94,11 @@ int main(int argc, char* argv[]) {
         renderer.update_fs_explorer(file_ex);
 		renderer.search_box(ws.search_box, ws.search_results, ws.search_index, ws.search_mode);
         if (imitate_btn("File")) {
-            
+            imitate_btn("New");
+            imitate_btn("Open");
+            imitate_btn("Save");
+            imitate_btn("Save as...");
+            imitate_btn("Quit");
         }
         if (imitate_btn("Edit")) {
             
@@ -100,6 +111,7 @@ int main(int argc, char* argv[]) {
         else {
 			ui.group_off("View", "");
         }
+        imitate_spbtn("FileEX_close");
         renderer.rend();
 		ui.flont();
     }

@@ -744,10 +744,23 @@ public:
 		bool bef = false;
 		bool tgr_bef = false;
     };
+    struct sp_btn {
+        SDL_Rect r = {0,0,20,20};
+        bool hv = false;
+        bool clicked = false;
+        bool ishide = true;
+        std::string type = "None";
+    };
+    /*
+    None: NoType
+    Close: close Button
+    */
     SDL_Point mousePos = {0,0};
     bool Left_click = false;
     bool z = false;
+    int layer = 0;
     std::unordered_map<std::string, button_set> button_map;
+    std::unordered_map<std::string, sp_btn> sp_btns;
     void group_off(std::string s, std::string ne) {
         for (auto& [name, btn] : button_map) {
             if (btn.group == s && name != ne) {
@@ -831,6 +844,23 @@ public:
             return false;
         }
     }
+    bool sp_btn_cl(std::string name){
+        if (!sp_btns.contains(name)) return false;
+        if (sp_btns[name].ishide) return false;
+        sp_btns[name].hv = SDL_PointInRect(&mousePos,&sp_btns[name].r);
+        SDL_Rect r = sp_btns[name].r;
+        bool iscl = SDL_PointInRect(&mousePos,&r) && Left_click;
+        sp_btns[name].clicked = iscl;
+        return sp_btns[name].clicked;
+    }
+    void add_sp_btn(std::string name,std::string type,SDL_Rect r){
+        sp_btns[name].r = r;
+        sp_btns[name].type = type;
+    }
+};
+class over_wiget{
+public:
+    
 };
 class Renderer {
     SDL_Window* win = nullptr;
@@ -1244,6 +1274,24 @@ public:
         SDL_RenderWindowToLogical(ren, mouse_x, mouse_y, &mx, &my);
         mouse_x = (int)mx; mouse_y = (int)my;
 	}
+    void closs(SDL_Rect& rt,SDL_Color cols){
+        SDL_SetRenderDrawColor(ren,cols.r,cols.g,cols.b,cols.a);
+        int svLine_1[4] = {rt.x + 2,rt.y + 2,rt.x + rt.w - 2,rt.y + rt.h -2};
+        SDL_RenderDrawLine(ren,svLine_1[0],svLine_1[1],svLine_1[2],svLine_1[3]);
+    }
+    void sp_button(UI& ui,std::string name){
+        if(!ui.sp_btns.contains(name) || ui.sp_btns[name].ishide) return;
+        UI::sp_btn& sp_b = ui.sp_btns[name];
+        if(sp_b.type == "Close"){
+            if(!sp_b.hv){
+                SDL_SetRenderDrawColor(ren,250,250,250,255);
+                SDL_RenderFillRect(ren,&sp_b.r);
+            }else{
+                SDL_SetRenderDrawColor(ren,250,0,0,255);
+                SDL_RenderFillRect(ren,&sp_b.r);
+            }
+        }
+    }
 };
 struct Editor_mgr{
     std::string name;
