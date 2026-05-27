@@ -19,7 +19,8 @@ int main(int argc, char* argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Init: %s | %s", SDL_GetError(), TTF_GetError());
         return 1;
     }
-
+    over_wiget file_picker;
+    file_picker.init(renderer.ren,renderer.lineH);
     file_explorer file_ex;
 	file_ex.F_X = 0; file_ex.F_Y = 20;
     file_ex.F_W = 200;file_ex.F_H = WIN_H - 20;
@@ -28,7 +29,6 @@ int main(int argc, char* argv[]) {
     /*
         "SDL2 テキストエディタ  (差分方式 Undo/Redo)\n"
         "IME入力（日本語・中国語・韓国語）対応\n"
-        "\n"
         "ショートカット:\n"
         "  Ctrl+A            全選択\n"
         "  Ctrl+C            コピー\n"
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
 	int mousex = 0, mousey = 0;
     bool running = true, mouseDown = false;
 	bool bef_mousebtn = false, now_mousebtn = false;
+
     auto imitate_btn = [&renderer, &ui](std::string but_key) {
 		renderer.btn_draw(ui, but_key);
 		return ui.button(but_key);
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
         return ui.sp_btn_cl(b_key);
     };
     Editor& ed = ws.work_s[ws.active].edits;
+
     while (running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
@@ -78,6 +80,10 @@ int main(int argc, char* argv[]) {
                     textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
                     file_explorer_event(e, file_ex, renderer, true);
                 }
+            }else if(ui.layer == 1){
+                textEditEvent_sh(e, file_picker.names, renderer, mouseDown, mx, my, true);
+                textEditEvent_sh(e, file_picker.file_pick.ed, renderer, mouseDown, mx, my, true);
+                file_explorer_event(e, file_picker.file_pick, renderer, true);
             }
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
                 mx = e.button.x;
@@ -94,7 +100,9 @@ int main(int argc, char* argv[]) {
         renderer.update_fs_explorer(file_ex);
 		renderer.search_box(ws.search_box, ws.search_results, ws.search_index, ws.search_mode);
         if (imitate_btn("File")) {
-            imitate_btn("New");
+            if(imitate_btn("New")){
+                ui.layer = 1;
+            }
             imitate_btn("Open");
             imitate_btn("Save");
             imitate_btn("Save as...");
@@ -110,6 +118,9 @@ int main(int argc, char* argv[]) {
         }
         else {
 			ui.group_off("View", "");
+        }
+        if(ui.layer == 1){
+            renderer.drw_wiget(file_picker);
         }
         imitate_spbtn("FileEX_close");
         renderer.rend();

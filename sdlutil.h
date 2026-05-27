@@ -696,7 +696,34 @@ class file_explorer {
         }
         return "f";
     }
-    bool hitscan(SDL_Point mousePos,bool click,bool doubleclick) {
+    std::string hitscan_pick(SDL_Point mousePos,bool click,bool doubleclick) {
+		if (file_lists.empty()) return "";
+        SDL_Rect hit = {F_X,F_Y,F_W,F_H};
+        bool before = false;
+        for (size_t i = 0; i < file_lists.size(); ++i) {
+            hit = { F_X + PADDING,int(F_Y + i * 20 - scrollRow * 20 + ed.TX_H),F_W - PADDING,20 };
+            file_lists[i].rect = hit;
+			before = file_lists[i].selected;
+            if(doubleclick && SDL_PointInRect(&mousePos, &hit)){
+                if(fs::is_directory(file_lists[i].subs_path)) {
+                    path_set(true,file_lists[i].subs_path);
+                    return file_lists[i].subs_path.string();
+                }if(fs::is_regular_file(file_lists[i].subs_path)){
+                    return file_lists[i].subs_path.string();
+                }
+            }
+            if(click){
+                file_lists[i].selected = SDL_PointInRect(&mousePos, &hit);
+            }
+            else if(before){
+                file_lists[i].selected = true;
+			}else {
+                file_lists[i].selected = false;
+            }
+        }
+        return "";
+    }
+    bool hitscan_ex(SDL_Point mousePos,bool click,bool doubleclick) {
 		if (file_lists.empty()) return false;
         SDL_Rect hit = {F_X,F_Y,F_W,F_H};
         bool before = false;
@@ -860,7 +887,20 @@ public:
 };
 class over_wiget{
 public:
-    
+    SDL_Rect size = {130,130,500,450};
+    file_explorer file_pick;
+    Editor names;
+    void init(SDL_Renderer* ren,int linrw){
+        file_pick.F_X = size.x;file_pick.F_Y = size.y;
+        file_pick.F_W = size.w;file_pick.F_H = size.h;
+        file_pick.init(linrw);
+        names.set_init({size.x,size.y + size.h - 30,size.w, 30},"",linrw);
+        names.cursor = {0,0};
+        names.noLineNo = false;
+    }
+    void Filepickup(std::string filetype){
+        
+    }
 };
 class Renderer {
     SDL_Window* win = nullptr;
@@ -1291,6 +1331,10 @@ public:
                 SDL_RenderFillRect(ren,&sp_b.r);
             }
         }
+    }
+    void drw_wiget(over_wiget& w){
+        update_fs_explorer(w.file_pick);
+        TextBoxsh(w.names);
     }
 };
 struct Editor_mgr{
