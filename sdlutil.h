@@ -696,34 +696,7 @@ class file_explorer {
         }
         return "f";
     }
-    std::string hitscan_pick(SDL_Point mousePos,bool click,bool doubleclick) {
-		if (file_lists.empty()) return "";
-        SDL_Rect hit = {F_X,F_Y,F_W,F_H};
-        bool before = false;
-        for (size_t i = 0; i < file_lists.size(); ++i) {
-            hit = { F_X + PADDING,int(F_Y + i * 20 - scrollRow * 20 + ed.TX_H),F_W - PADDING,20 };
-            file_lists[i].rect = hit;
-			before = file_lists[i].selected;
-            if(doubleclick && SDL_PointInRect(&mousePos, &hit)){
-                if(fs::is_directory(file_lists[i].subs_path)) {
-                    path_set(true,file_lists[i].subs_path);
-                    return file_lists[i].subs_path.string();
-                }if(fs::is_regular_file(file_lists[i].subs_path)){
-                    return file_lists[i].subs_path.string();
-                }
-            }
-            if(click){
-                file_lists[i].selected = SDL_PointInRect(&mousePos, &hit);
-            }
-            else if(before){
-                file_lists[i].selected = true;
-			}else {
-                file_lists[i].selected = false;
-            }
-        }
-        return "";
-    }
-    bool hitscan_ex(SDL_Point mousePos,bool click,bool doubleclick) {
+    bool hitscan(SDL_Point mousePos,bool click,bool doubleclick) {
 		if (file_lists.empty()) return false;
         SDL_Rect hit = {F_X,F_Y,F_W,F_H};
         bool before = false;
