@@ -15,6 +15,5 @@ public:
 		ui.add_btn("View","Men_bar",true,{140,0,70,20});
 		ui.add_btn("Texteditor","View",true,{140,20,70,20});
 		ui.add_btn("LineNum","Texteditor",true,{210,20,70,20});
-		ui.add_sp_btn("FileEX_close","Close",{200,200,20,20});
 	}
 };

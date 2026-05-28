@@ -19,8 +19,7 @@ int main(int argc, char* argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Init: %s | %s", SDL_GetError(), TTF_GetError());
         return 1;
     }
-    over_wiget file_picker;
-    file_picker.init(renderer.ren,renderer.lineH);
+    
     file_explorer file_ex;
 	file_ex.F_X = 0; file_ex.F_Y = 20;
     file_ex.F_W = 200;file_ex.F_H = WIN_H - 20;
@@ -45,8 +44,10 @@ int main(int argc, char* argv[]) {
     file_ex.init(renderer.lineH);
     UI ui;
 	UI_CFG ui_cfg;
+    over_wiget file_picker;
+    file_picker.ui = &ui;
+    file_picker.init(renderer.ren,renderer.lineH);
 	ui_cfg.init(ui);
-    ui.sp_btns["FileEX_close"].ishide = false;
     int mx = 0;
     int my = 0;
 	int mousex = 0, mousey = 0;
@@ -73,14 +74,13 @@ int main(int argc, char* argv[]) {
             }
 			SDL_Point mouse_P = { mx, my };
             if(ui.layer == 0){
-                if (!ui.z) {
-                    ws.search_box_event(e, mouse_P);
-                    textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
-                    textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
-                    textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
-                    file_explorer_event(e, file_ex, renderer, true);
-                }
+                ws.search_box_event(e, mouse_P);
+                textEditEvent(e, ed, renderer, mouseDown, mx, my, !ws.search_mode);
+                textEditEvent_sh(e, ws.search_box, renderer, mouseDown, mx, my, ws.search_mode);
+                textEditEvent_sh(e, file_ex.ed, renderer, mouseDown, mx, my, true);
+                file_explorer_event(e, file_ex, renderer, true);
             }else if(ui.layer == 1){
+                ui.group_off("Men_bar","");
                 textEditEvent_sh(e, file_picker.names, renderer, mouseDown, mx, my, true);
                 textEditEvent_sh(e, file_picker.file_pick.ed, renderer, mouseDown, mx, my, true);
                 file_explorer_event(e, file_picker.file_pick, renderer, true);
@@ -102,6 +102,7 @@ int main(int argc, char* argv[]) {
         if (imitate_btn("File")) {
             if(imitate_btn("New")){
                 ui.layer = 1;
+                file_picker.file_pick.path_set(true,fs::current_path());
             }
             imitate_btn("Open");
             imitate_btn("Save");
@@ -121,8 +122,15 @@ int main(int argc, char* argv[]) {
         }
         if(ui.layer == 1){
             renderer.drw_wiget(file_picker);
+            ui.sp_btns[file_picker.wiget_n].ishide = false;
+            ui.button_map[file_picker.wiget_n + "_open"].ishidden = false;
+            imitate_btn(file_picker.wiget_n + "_open");
+            if (imitate_spbtn(file_picker.wiget_n)){
+                ui.layer = 0;
+                ui.sp_btns[file_picker.wiget_n].ishide = true;
+                ui.button_map[file_picker.wiget_n + "_open"].ishidden = true;;
+            }
         }
-        imitate_spbtn("FileEX_close");
         renderer.rend();
 		ui.flont();
     }

@@ -12,6 +12,13 @@
 #include <iostream>
 #include <unordered_map>
 
+enum {
+    file_or_dir,
+    file,
+    dir,
+    save
+};
+
 namespace fs = std::filesystem;
 struct result_enum {
     int row;
@@ -863,17 +870,27 @@ public:
     SDL_Rect size = {130,130,500,450};
     file_explorer file_pick;
     Editor names;
+    UI* ui = nullptr;
+    std::string wiget_n = "FilePicker";
     void init(SDL_Renderer* ren,int linrw){
         file_pick.F_X = size.x;file_pick.F_Y = size.y;
-        file_pick.F_W = size.w;file_pick.F_H = size.h;
+        file_pick.F_W = size.w;file_pick.F_H = size.h - 50;
         file_pick.init(linrw);
-        names.set_init({size.x,size.y + size.h - 30,size.w, 30},"",linrw);
+        names.set_init({size.x,size.y + size.h - 50,size.w, 30},"",linrw);
         names.cursor = {0,0};
         names.noLineNo = false;
+        if (ui == nullptr){
+            return;
+        }
+        printf("suc\n");
+        ui->add_sp_btn(wiget_n,"Close",{size.x + size.w - 20,size.y,20,20});
+        ui->add_btn(wiget_n + "_open",wiget_n,false,{size.x + size.w - 200, size.y + size.h - 40,70,20});
+        ui->button_map[wiget_n + "_open"].ishidden = true;
     }
     void Filepickup(std::string filetype){
         
     }
+
 };
 class Renderer {
     SDL_Window* win = nullptr;
@@ -1131,9 +1148,9 @@ public:
         ed.viewRows = (ed.TX_H - ed.PADDING * 2) / lineH;
         ed.viewW = ed.TX_W - linenoW - ed.PADDING * 2;
         SDL_Rect bgrect = { ed.TX_X, ed.TX_Y, ed.TX_W, ed.TX_H };
-        SDL_SetRenderDrawColor(ren, colBg.r, colBg.g, colBg.b, 255);
+        SDL_SetRenderDrawColor(ren, 250, 250, 250, 255);
         SDL_RenderFillRect(ren, &bgrect);
-
+        SDL_Color textB = {5,5,5,255};
         SDL_Rect clip = { linenoW + ed.PADDING + ed.TX_X - 10, ed.PADDING + ed.TX_Y, ed.TX_W - (linenoW + ed.PADDING), (ed.TX_Y + ed.TX_H) - ed.PADDING * 2 };
         SDL_RenderSetClipRect(ren, &clip);
 
@@ -1157,7 +1174,7 @@ public:
                 }
             }
 
-            if (!ln.empty()) drawsmlText(ln, x0 + ed.TX_X, y + ed.TX_Y, colText);
+            if (!ln.empty()) drawsmlText(ln, x0 + ed.TX_X, y + ed.TX_Y, textB);
 
             // IME preedit
             if (!ed.imeComposing.empty() && row == ed.cursor.row) {
@@ -1246,7 +1263,7 @@ public:
 		SDL_SetRenderDrawColor(ren, colFsBg.r, colFsBg.g, colFsBg.b, 255);
         SDL_RenderFillRect(ren, &r);
         TextBoxsh(fi_ex.ed);
-        drawText("<-",fi_ex.F_X,fi_ex.F_Y,{220,220,220,255});
+        drawText("<-",fi_ex.F_X,fi_ex.F_Y,{20,20,20,255});
 		SDL_RenderSetClipRect(ren, &clip);
         for (size_t i = 0;i < fi_ex.file_lists.size(); i++){
             
@@ -1287,10 +1304,12 @@ public:
         SDL_RenderWindowToLogical(ren, mouse_x, mouse_y, &mx, &my);
         mouse_x = (int)mx; mouse_y = (int)my;
 	}
-    void closs(SDL_Rect& rt,SDL_Color cols){
+    void closs(SDL_Rect& rt,SDL_Color cols,int pd){
         SDL_SetRenderDrawColor(ren,cols.r,cols.g,cols.b,cols.a);
-        int svLine_1[4] = {rt.x + 2,rt.y + 2,rt.x + rt.w - 2,rt.y + rt.h -2};
+        int svLine_1[4] = {rt.x + pd,rt.y + pd,rt.x + rt.w - pd,rt.y + rt.h - pd};
+        int svLine_2[4] = {rt.x + pd,rt.y + rt.h - pd,rt.x + rt.w - pd,rt.y + pd};
         SDL_RenderDrawLine(ren,svLine_1[0],svLine_1[1],svLine_1[2],svLine_1[3]);
+        SDL_RenderDrawLine(ren,svLine_2[0],svLine_2[1],svLine_2[2],svLine_2[3]);
     }
     void sp_button(UI& ui,std::string name){
         if(!ui.sp_btns.contains(name) || ui.sp_btns[name].ishide) return;
@@ -1299,13 +1318,19 @@ public:
             if(!sp_b.hv){
                 SDL_SetRenderDrawColor(ren,250,250,250,255);
                 SDL_RenderFillRect(ren,&sp_b.r);
+                SDL_Color c = {5,5,5,255};
+                closs(sp_b.r,c,5);
             }else{
                 SDL_SetRenderDrawColor(ren,250,0,0,255);
                 SDL_RenderFillRect(ren,&sp_b.r);
+                SDL_Color c = {220,220,220,255};
+                closs(sp_b.r,c,5);
             }
         }
     }
     void drw_wiget(over_wiget& w){
+        SDL_SetRenderDrawColor(ren,250,250,250,250);
+        SDL_RenderFillRect(ren,&w.size);
         update_fs_explorer(w.file_pick);
         TextBoxsh(w.names);
     }
