@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
             }else if(ui.layer == 1){
                 ev_ha.wiget_ev(ui,mouse_P,e,file_picker,renderer,mouseDown,mx,my,".txt");
             }
-                if (e.type == SDL_MOUSEBUTTONDOWN) {
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
                 mx = e.button.x;
                 my = e.button.y;
             }
@@ -94,6 +94,8 @@ int main(int argc, char* argv[]) {
 			ui.mousePos = { mousex, mousey };
 			now_mousebtn = e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT;
 			ui.Left_click = ui.pulse_click(bef_mousebtn, now_mousebtn);
+            ws.ev_hitscan(ui.mousePos,SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT);
+            ws.ev_close(ui.mousePos,SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT);
             bef_mousebtn = now_mousebtn;
         }
         renderer.draw_bg({250,250,250,255});
@@ -118,7 +120,7 @@ int main(int argc, char* argv[]) {
         }
         if (imitate_btn("View")) {
             if (imitate_btn("Texteditor")) {
-                ed.noLineNo = imitate_btn("LineNum");
+                ws.ws_linenum(imitate_btn("LineNum"));
             }
         }
         else {
@@ -157,4 +159,3 @@ int main(int argc, char* argv[]) {
     renderer.destroy();
     return 0;
 }
-

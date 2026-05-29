@@ -914,7 +914,6 @@ public:
         if (ui == nullptr){
             return;
         }
-        printf("suc\n");
         ui->add_sp_btn(wiget_n,"Close",{size.x + size.w - 20,size.y,20,20});
         ui->add_btn(wiget_n + "_open",wiget_n,false,{size.x + size.w - 200, size.y + size.h - 40,70,20});
         ui->button_map[wiget_n + "_open"].ishidden = true;
@@ -955,7 +954,7 @@ class workspace{
         work_s.push_back({work_names,ed,{350,20,150,20}});
     }
     void erase_workspace(int w_id){
-        work_s.erase(work_s.begin() + w_id);
+        work_s[w_id].tub = {-1,-1,-1,-1};
     }
     void init(int lineH){
         new_workspace("new_workspace",lineH);
@@ -1009,6 +1008,35 @@ class workspace{
 					sh_str = search_box.buf.line(0);
                 }
 			}
+        }
+    }
+    void ev_hitscan(SDL_Point Mouse_p,bool click){
+        for (int index = 0;index < work_s.size();index++){
+            if(click){
+                if(SDL_PointInRect(&Mouse_p,&work_s[index].tub)){
+                    active = index;
+                    return;
+                }
+            }
+        }
+        return;
+    }
+    void ev_close(SDL_Point Mouse_p,bool click){
+        SDL_Rect close_rec = {0,0,0,0};
+        for (int index = 0;index < work_s.size();index++){
+            if(click){
+                close_rec = {work_s[index].tub.x + work_s[index].tub.w - 20,work_s[index].tub.y,20,20};
+                if(SDL_PointInRect(&Mouse_p,&close_rec)){
+                    erase_workspace(index);
+                }
+            }
+        }
+
+        return;
+    }
+    void ws_linenum(bool flu){
+        for (int index = 0;index < work_s.size();index++){
+            work_s[index].edits.noLineNo = flu;
         }
     }
 };
