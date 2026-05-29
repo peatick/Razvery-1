@@ -12,7 +12,7 @@
 #include <iostream>
 #include <unordered_map>
 
-enum {
+enum fileTYPE{
     file_or_dir,
     file,
     dir,
@@ -698,13 +698,13 @@ class file_explorer {
             }
             t_files.close();
             return all_str;
-        }else{
-            printf("failed\n");
         }
         return "f";
     }
     bool hitscan(SDL_Point mousePos,bool click,bool doubleclick) {
 		if (file_lists.empty()) return false;
+        SDL_Rect s_rect = {F_X,F_Y,F_W,F_H};
+        if (!SDL_PointInRect(&mousePos,&s_rect)) return false;
         SDL_Rect hit = {F_X,F_Y,F_W,F_H};
         bool before = false;
         for (size_t i = 0; i < file_lists.size(); ++i) {
@@ -731,6 +731,37 @@ class file_explorer {
             }
         }
         return false;
+    }
+    fs::path hitscan_pickup(SDL_Point mousePos,bool doubleclick,int type,std::string ext) {
+		if (file_lists.empty()) return "";
+        SDL_Rect s_rect = {F_X,F_Y,F_W,F_H};
+        if (!SDL_PointInRect(&mousePos,&s_rect)) return "";
+        SDL_Rect hit = {F_X,F_Y,F_W,F_H};
+        bool before = false;
+        for (size_t i = 0; i < file_lists.size(); ++i) {
+            hit = { F_X + PADDING,int(F_Y + i * 20 - scrollRow * 20 + ed.TX_H),F_W - PADDING,20 };
+            file_lists[i].rect = hit;
+			before = file_lists[i].selected;
+            if(doubleclick && SDL_PointInRect(&mousePos, &hit)){
+                if(fs::is_directory(file_lists[i].subs_path)) {
+                    if(type == dir || type == file_or_dir){
+                        return file_lists[i].subs_path;
+                    }
+                }if(fs::is_regular_file(file_lists[i].subs_path)){
+                    if(type == file || type == file_or_dir){
+                        if(ext == ""){
+                            return file_lists[i].subs_path;
+                        }
+                        std::string f_extnc = file_lists[i].subs_path.extension().string();
+                        std::transform(f_extnc.begin(), f_extnc.end(), f_extnc.begin(), ::tolower);
+                        if(ext == f_extnc){
+                            return file_lists[i].subs_path;
+                        }
+                    }
+                }
+            }
+        }
+        return "";
     }
     void back_path(){
         path_set(true,p.parent_path());
@@ -872,6 +903,7 @@ public:
     Editor names;
     UI* ui = nullptr;
     std::string wiget_n = "FilePicker";
+    std::string wiget_type = "open";
     void init(SDL_Renderer* ren,int linrw){
         file_pick.F_X = size.x;file_pick.F_Y = size.y;
         file_pick.F_W = size.w;file_pick.F_H = size.h - 50;
@@ -886,11 +918,99 @@ public:
         ui->add_sp_btn(wiget_n,"Close",{size.x + size.w - 20,size.y,20,20});
         ui->add_btn(wiget_n + "_open",wiget_n,false,{size.x + size.w - 200, size.y + size.h - 40,70,20});
         ui->button_map[wiget_n + "_open"].ishidden = true;
+        ui->button_map[wiget_n + "_open"].subject = "open";
     }
     void Filepickup(std::string filetype){
         
     }
 
+};
+struct Editor_mgr{
+    std::string name;
+    Editor edits;
+    SDL_Rect tub;
+    std::fstream text_file;
+    fs::path p;
+    bool save = true;
+};
+
+class workspace{
+    public:
+    SDL_Rect w_r = {200,40,700,550};
+    std::vector<Editor_mgr> work_s;
+    int active = 0;
+	bool search_mode = false;
+    std::vector<result_enum> search_results;
+	int search_index = 0;
+	Editor search_box;
+	std::string sh_str;
+    void new_workspace(std::string work_names,int lineH){
+        Editor ed;
+        ed.set_init(w_r, "hello world!\n",lineH);
+        work_s.push_back({work_names,ed,{200,20,150,20}});
+    }
+    void push_workspace(std::string work_names,std::string file_in_str,int lineH){
+        Editor ed;
+        ed.set_init(w_r, file_in_str,lineH);
+        work_s.push_back({work_names,ed,{350,20,150,20}});
+    }
+    void erase_workspace(int w_id){
+        work_s.erase(work_s.begin() + w_id);
+    }
+    void init(int lineH){
+        new_workspace("new_workspace",lineH);
+        search_box.set_init({700,50,200,40}, "", lineH);
+    }
+    void search_str(std::string s) {
+        if (s.empty()) return;
+		search_index = 0;
+        Editor& active_ed = work_s[active].edits;
+        if (active_ed.buf.lines.empty()) return;
+		search_results.clear();
+		for (int i = 0; i < active_ed.buf.numLines(); ++i) {
+            const std::string& ln = active_ed.buf.line(i);
+            size_t pos = ln.find(s);
+            while (pos != std::string::npos) {
+                search_results.push_back({i, (int)pos});
+                pos = ln.find(s, pos + 1);
+            }
+        }
+    }
+    void search_box_cursor_move() {
+        if (search_results.empty()) return;
+		if (!search_mode) return;
+        Editor& active_ed = work_s[active].edits;
+		active_ed.cursor.col = search_results[search_index].col;
+		active_ed.cursor.row = search_results[search_index].row;
+        if (search_index < search_results.size() - 1) {
+           ++search_index;
+        } else {
+            search_index = 0;
+        }
+	}
+    void search_box_event(SDL_Event& e, SDL_Point mouse_P) {
+        if (!SDL_PointInRect(&mouse_P, &w_r)) return;
+        if (e.type == SDL_KEYDOWN) {
+            if ((e.key.keysym.mod & KMOD_CTRL) && e.key.keysym.sym == SDLK_f) {
+                search_mode = !search_mode;
+            }
+            else if (search_mode && e.key.keysym.sym == SDLK_RETURN) {
+                if(!search_results.empty()) {
+                    if (sh_str == search_box.buf.line(0)) {
+                        search_box_cursor_move();
+                    }
+                    else {
+                        search_str(search_box.buf.line(0));
+                        sh_str = search_box.buf.line(0);
+                    }
+                }
+                else {
+					search_str(search_box.buf.line(0));
+					sh_str = search_box.buf.line(0);
+                }
+			}
+        }
+    }
 };
 class Renderer {
     SDL_Window* win = nullptr;
@@ -1334,92 +1454,44 @@ public:
         update_fs_explorer(w.file_pick);
         TextBoxsh(w.names);
     }
-};
-struct Editor_mgr{
-    std::string name;
-    Editor edits;
-    SDL_Rect tub;
+    void drw_tab(workspace& ws){
+        if(ws.work_s.empty()) return;
+        std::vector<Editor_mgr>& eds = ws.work_s;
+        for (int t_num = 0;t_num < eds.size(); t_num++){
+            if(t_num == ws.active){
+                SDL_SetRenderDrawColor(ren,200,200,200,255);
+            }else{
+                SDL_SetRenderDrawColor(ren,100,100,100,255);
+            }
+            SDL_RenderFillRect(ren,&eds[t_num].tub);
+            SDL_Rect clip = {eds[t_num].tub.x,eds[t_num].tub.y,eds[t_num].tub.w - 20,eds[t_num].tub.h};
+            SDL_RenderSetClipRect(ren,&clip);
+            drawsmlText(eds[t_num].name,eds[t_num].tub.x + 3,eds[t_num].tub.y + 3,{5,5,5,255});
+            SDL_RenderSetClipRect(ren,nullptr);
+            SDL_Rect clos = {eds[t_num].tub.x + eds[t_num].tub.w - 20,eds[t_num].tub.y,20,20};
+            closs(clos,{70,70,70,255},4);
+        }
+    }
 };
 
-class workspace{
-    public:
-    SDL_Rect w_r = {200,40,700,550};
-    std::vector<Editor_mgr> work_s;
-    int active = 0;
-	bool search_mode = false;
-    std::vector<result_enum> search_results;
-	int search_index = 0;
-	Editor search_box;
-	std::string sh_str;
-    void new_workspace(std::string work_names,Renderer& ren){
-        Editor ed;
-        ed.set_init(w_r, "hello world!\n",ren.lineH);
-        work_s.push_back({work_names,ed,{0,0,0,0}});
-    }
-    void push_workspace(std::string work_names,std::string file_in_str,Renderer& ren){
-        Editor ed;
-        ed.set_init(w_r, file_in_str,ren.lineH);
-        work_s.push_back({work_names,ed,{0,0,0,0}});
-    }
-    void erase_workspace(int w_id){
-        work_s.erase(work_s.begin() + w_id);
-    }
-    void init(Renderer& ren){
-        new_workspace("new_workspace",ren);
-        search_box.set_init({700,50,200,40}, "", ren.lineH);
-    }
-    void search_str(std::string s) {
-        if (s.empty()) return;
-		search_index = 0;
-        Editor& active_ed = work_s[active].edits;
-        if (active_ed.buf.lines.empty()) return;
-		search_results.clear();
-		for (int i = 0; i < active_ed.buf.numLines(); ++i) {
-            const std::string& ln = active_ed.buf.line(i);
-            size_t pos = ln.find(s);
-            while (pos != std::string::npos) {
-                search_results.push_back({i, (int)pos});
-                pos = ln.find(s, pos + 1);
-            }
-        }
-    }
-    void search_box_cursor_move() {
-        if (search_results.empty()) return;
-		if (!search_mode) return;
-        Editor& active_ed = work_s[active].edits;
-		active_ed.cursor.col = search_results[search_index].col;
-		active_ed.cursor.row = search_results[search_index].row;
-        if (search_index < search_results.size() - 1) {
-           ++search_index;
-        } else {
-            search_index = 0;
-        }
-	}
-    void search_box_event(SDL_Event& e, SDL_Point mouse_P) {
-        if (!SDL_PointInRect(&mouse_P, &w_r)) return;
-        if (e.type == SDL_KEYDOWN) {
-            if ((e.key.keysym.mod & KMOD_CTRL) && e.key.keysym.sym == SDLK_f) {
-                search_mode = !search_mode;
-            }
-            else if (search_mode && e.key.keysym.sym == SDLK_RETURN) {
-                if(!search_results.empty()) {
-                    if (sh_str == search_box.buf.line(0)) {
-                        search_box_cursor_move();
-                    }
-                    else {
-                        search_str(search_box.buf.line(0));
-                        sh_str = search_box.buf.line(0);
-                    }
-                }
-                else {
-					search_str(search_box.buf.line(0));
-					sh_str = search_box.buf.line(0);
-                }
-			}
-        }
-    }
-};
 
 void textEditEvent(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler);
 void textEditEvent_sh(SDL_Event& e, Editor& ed, Renderer& renderer, bool& mouseDown, int mox, int moy, bool handler);
 void file_explorer_event(SDL_Event& e, file_explorer& fi, Renderer& renderer, bool handler);
+
+class Ev_h{
+public:
+    fs::path f_path = "";
+    void wiget_ev(UI& ui,SDL_Point& mouse_P,SDL_Event& e,over_wiget& file_picker,Renderer& renderer,bool& mouseDown,int& mx, int& my,std::string ex){
+        ui.group_off("Men_bar","");
+        textEditEvent_sh(e, file_picker.names, renderer, mouseDown, mx, my, true);
+        textEditEvent_sh(e, file_picker.file_pick.ed, renderer, mouseDown, mx, my, true);
+        bool dclick = e.type == SDL_MOUSEBUTTONDOWN && e.button.clicks == 2 && e.button.button == SDL_BUTTON_LEFT;
+        SDL_Rect sr = {file_picker.file_pick.F_X,file_picker.file_pick.F_Y,file_picker.file_pick.F_W,file_picker.file_pick.F_H};
+        if(dclick && SDL_PointInRect(&mouse_P,&sr)){
+            f_path = file_picker.file_pick.hitscan_pickup(mouse_P,dclick,file,ex);
+            file_picker.names.buf.setAllText(f_path.filename().string());
+        }
+        file_explorer_event(e, file_picker.file_pick, renderer, true);
+    }
+};
